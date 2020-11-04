@@ -1,0 +1,15 @@
+FROM golang:1.11.9-alpine3.9  AS build-env
+RUN echo $GOPATH
+
+RUN apk add --no-cache git gcc musl-dev
+
+RUN cp -r /Users/nishant/go/pkg/ /go/pkg/
+WORKDIR /go/src/devtron.ai/migrator
+ADD . /go/src/devtron.ai/migrator/
+ENV GO111MODULE=on
+RUN go build
+
+FROM alpine:3.9
+RUN apk add --no-cache ca-certificates
+COPY --from=build-env  /go/src/devtron.ai/migrator/migrator .
+CMD ["./migrator"]
