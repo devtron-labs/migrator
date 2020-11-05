@@ -18,6 +18,4 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build   -mod=vendor -a -installsuff
 FROM ubuntu
 RUN apt-get update && apt-get install -y ca-certificates && apt-get install git -y
 COPY --from=build-env /go/bin/migrator /go/bin/migrator
-#ENTRYPOINT ["/go/bin/migrator"]
-
-ENTRYPOINT ["/bin/sh"]
+ENTRYPOINT ["/go/bin/migrator"]
