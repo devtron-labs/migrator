@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+
 	"github.com/caarlos0/env"
 	"github.com/golang-migrate/migrate/v4"
 	_ "github.com/golang-migrate/migrate/v4/database/postgres"
@@ -16,12 +17,11 @@ type MigrateConfig struct {
 	TargetVersion uint   `env:"MIGRATE_TO_VERSION" envDefault:"0"`
 	DbType        string `env:"DB_TYPE"  envDefault:"postgres"`
 	UserName      string `env:"DB_USER_NAME"  envDefault:"postgres"`
-	Password      string `env:"DB_PASSWORD"  `
+	Password      string `env:"DB_PASSWORD"  secretData:"-"`
 	Host          string `env:"DB_HOST"  envDefault:"localhost"`
 	Port          string `env:"DB_PORT"  envDefault:"5432"`
 	DbName        string `env:"DB_NAME"  envDefault:"migrate_test"`
 }
-
 
 func (cfg MigrateConfig) Valid() bool {
 	if cfg.DatabaseUrl == "" {
