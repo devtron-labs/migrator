@@ -2,6 +2,10 @@ package main
 
 import (
 	"fmt"
+	"log"
+	"path/filepath"
+	"time"
+
 	"github.com/caarlos0/env"
 	"go.uber.org/zap"
 	"gopkg.in/src-d/go-git.v4"
@@ -9,14 +13,11 @@ import (
 	"gopkg.in/src-d/go-git.v4/plumbing/object"
 	"gopkg.in/src-d/go-git.v4/plumbing/transport"
 	"gopkg.in/src-d/go-git.v4/plumbing/transport/http"
-	"log"
-	"path/filepath"
-	"time"
 )
 
 type GitConfig struct {
-	Token          string `env:"GIT_AUTH_TOKEN" `                //not null
-	UserName       string `env:"GIT_USER"`                      //not null
+	Token          string `env:"GIT_AUTH_TOKEN" secretData:"-"`      //not null
+	UserName       string `env:"GIT_USER"`                           //not null
 	GitWorkingDir  string `env:"GIT_WORKING_DIR" envDefault:"/tmp/"` //working directory for git. might use pvc
 	GitRepoUrl     string `env:"GIT_REPO_URL" `
 	GitTag         string `env:"GIT_TAG"`
@@ -71,7 +72,7 @@ func NewGitServiceImpl(config *GitConfig, logger *zap.SugaredLogger) *GitService
 }
 
 func (impl GitServiceImpl) BuildScriptSource(clonedDir string) string {
-	return filepath.Join(clonedDir, impl.config.ScriptLocation, )
+	return filepath.Join(clonedDir, impl.config.ScriptLocation)
 }
 
 func (impl GitServiceImpl) CloneAndCheckout(targetDir string) (clonedDir string, err error) {

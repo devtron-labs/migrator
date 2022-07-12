@@ -2,11 +2,13 @@ package main
 
 import (
 	"fmt"
+	"log"
+	"reflect"
+
 	_ "github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
 	_ "github.com/lib/pq"
 	"go.uber.org/zap"
-	"log"
 )
 
 func main() {
@@ -42,8 +44,7 @@ func NewApp() *App {
 	if !valid {
 		log.Fatal("not valid git config")
 	}
-	fmt.Println("valid git config found")
-	fmt.Println(gitcfg)
+	fmt.Printf("valid git config found %v\n", obfuscateSecretTags(gitcfg))
 	logger, err := zap.NewProduction()
 	checkErr(err)
 	gitService := NewGitServiceImpl(gitcfg, logger.Sugar())
@@ -53,8 +54,7 @@ func NewApp() *App {
 	if !valid {
 		log.Fatal("not valid migrate config")
 	}
-	fmt.Println("valid migrate config found")
-	fmt.Println(migrateConfig)
+	fmt.Printf("valid migrate config found: %v\n", obfuscateSecretTags(migrateConfig))
 	migrateUtil := NewMigrateUtil(migrateConfig, logger.Sugar())
 	fmt.Println("migrate util created")
 	return &App{migrateUtil: migrateUtil, gitService: gitService}
@@ -64,4 +64,19 @@ func checkErr(err error) {
 	if err != nil {
 		log.Fatal(err)
 	}
+}
+
+func obfuscateSecretTags(cfg interface{}) interface{} {
+
+	cfgDpl := reflect.New(reflect.ValueOf(cfg).Elem().Type()).Interface()
+	cfgDplElm := reflect.ValueOf(cfgDpl).Elem()
+	t := cfgDplElm.Type()
+	for i := 0; i < t.NumField(); i++ {
+		if _, ok := t.Field(i).Tag.Lookup("secretData"); ok {
+			cfgDplElm.Field(i).SetString("********")
+		} else {
+			cfgDplElm.Field(i).Set(reflect.ValueOf(cfg).Elem().Field(i))
+		}
+	}
+	return cfgDpl
 }
