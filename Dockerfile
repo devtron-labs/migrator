@@ -13,7 +13,7 @@ COPY go.sum .
 COPY . .
 
 # Build the binary
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build   -mod=vendor -a -installsuffix cgo -o /go/bin/migrator
+RUN CGO_ENABLED=0 GOOS=linux go build   -mod=vendor -a -installsuffix cgo -o /go/bin/migrator
 
 FROM ubuntu
 RUN apt-get update && apt-get install -y ca-certificates && apt-get install git -y
