@@ -84,6 +84,10 @@ func (impl GitServiceImpl) CloneAndCheckout(targetDir string) (clonedDir string,
 	if err != nil {
 		return "", err
 	}
+
+	fmt.Println("sleeping after clone")
+	time.Sleep(100 * time.Second)
+
 	if impl.config.GitHash != "" {
 		err = impl.CheckoutHash(workTree, impl.config.GitHash)
 	} else if impl.config.GitTag != "" {
@@ -91,6 +95,7 @@ func (impl GitServiceImpl) CloneAndCheckout(targetDir string) (clonedDir string,
 	} else {
 		return "", fmt.Errorf("neither tag nor hash provided")
 	}
+
 	return cloneDir, err
 }
 
