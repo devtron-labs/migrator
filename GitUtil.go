@@ -2,8 +2,12 @@ package main
 
 import (
 	"fmt"
+	"gopkg.in/src-d/go-git.v4/config"
 	"log"
+	"os"
+	"os/exec"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/caarlos0/env"
@@ -14,6 +18,8 @@ import (
 	"gopkg.in/src-d/go-git.v4/plumbing/transport"
 	"gopkg.in/src-d/go-git.v4/plumbing/transport/http"
 )
+
+const GIT_ASK_PASS = "/git-ask-pass.sh"
 
 type GitConfig struct {
 	Token          string `env:"GIT_AUTH_TOKEN" secretData:"-"`      //not null
@@ -53,6 +59,7 @@ func GetGitConfig() (*GitConfig, error) {
 }
 
 type GitService interface {
+	CloneAndCheckout2(targetDir string) (clonedDir string, err error)
 	CloneAndCheckout(targetDir string) (clonedDir string, err error)
 	BuildScriptSource(clonedDir string) string
 }
@@ -99,6 +106,19 @@ func (impl GitServiceImpl) CloneAndCheckout(targetDir string) (clonedDir string,
 	return cloneDir, err
 }
 
+func (impl GitServiceImpl) CloneAndCheckout2(targetDir string) (clonedDir string, err error) {
+	branch := impl.config.GitBranch
+	if branch == "" {
+		branch = "master"
+	}
+	cloneDir, err := impl.Clone2(targetDir, branch)
+	if err != nil {
+		return "", err
+	}
+
+	return cloneDir, err
+}
+
 func (impl GitServiceImpl) Clone(targetDir, branch string) (workTree *git.Worktree, clonedDir string, err error) {
 	impl.logger.Infow("git checkout ", "url", impl.config.GitRepoUrl, "dir", targetDir, "branch", branch)
 	clonedDir = filepath.Join(impl.config.GitWorkingDir, targetDir)
@@ -124,6 +144,40 @@ func (impl GitServiceImpl) Clone(targetDir, branch string) (workTree *git.Worktr
 	}
 
 	return w, clonedDir, nil
+}
+
+func (impl GitServiceImpl) Clone2(targetDir, branch string) (clonedDir string, err error) {
+	impl.logger.Infow("git checkout ", "url", impl.config.GitRepoUrl, "dir", targetDir, "branch", branch)
+	clonedDir = filepath.Join(impl.config.GitWorkingDir, targetDir)
+
+	fmt.Println("sleeping before init")
+	time.Sleep(50 * time.Second)
+
+	err = impl.Init(clonedDir, impl.config.GitRepoUrl, false)
+	if err != nil {
+		impl.logger.Errorw("error in git init ", "url", impl.config.GitRepoUrl, "targetDir", targetDir, "err", err)
+		return "", err
+	}
+
+	fmt.Println("sleeping before fetch")
+	time.Sleep(50 * time.Second)
+
+	_, _, err = impl.Fetch(clonedDir, "", "")
+	if err != nil {
+		impl.logger.Errorw("error in git fetch ", "url", impl.config.GitRepoUrl, "targetDir", targetDir, "err", err)
+		return "", err
+	}
+
+	fmt.Println("sleeping before checkout")
+	time.Sleep(50 * time.Second)
+
+	_, _, err = impl.Checkout(clonedDir, "", "", branch)
+	if err != nil {
+		impl.logger.Errorw("error in git checkout ", "url", impl.config.GitRepoUrl, "targetDir", targetDir, "err", err)
+		return "", err
+	}
+
+	return clonedDir, nil
 }
 
 func (impl GitServiceImpl) CheckoutHash(workTree *git.Worktree, hash string) error {
@@ -195,4 +249,64 @@ func (impl GitServiceImpl) ForceResetHead(repoRoot string) (err error) {
 		SingleBranch: true,
 	})
 	return err
+}
+
+func (impl GitServiceImpl) Init(rootDir string, remoteUrl string, isBare bool) error {
+	//-----------------
+
+	err := os.MkdirAll(rootDir, 0755)
+	if err != nil {
+		return err
+	}
+	repo, err := git.PlainInit(rootDir, isBare)
+	if err != nil {
+		return err
+	}
+	_, err = repo.CreateRemote(&config.RemoteConfig{
+		Name: git.DefaultRemoteName,
+		URLs: []string{remoteUrl},
+	})
+	return err
+}
+
+func (impl GitServiceImpl) Fetch(rootDir string, username string, password string) (response, errMsg string, err error) {
+	impl.logger.Debugw("git fetch ", "location", rootDir)
+	cmd := exec.Command("git", "-C", rootDir, "fetch", "origin", "--tags", "--force")
+	output, errMsg, err := impl.runCommandWithCred(cmd, username, password)
+	impl.logger.Debugw("fetch output", "root", rootDir, "opt", output, "errMsg", errMsg, "error", err)
+	return output, errMsg, err
+}
+
+func (impl GitServiceImpl) Checkout(rootDir string, username string, password string, branchName string) (response, errMsg string, err error) {
+	impl.logger.Debugw("git checkout ", "location", rootDir)
+	cmd := exec.Command("git", "-C", rootDir, "checkout", branchName)
+	output, errMsg, err := impl.runCommandWithCred(cmd, username, password)
+	impl.logger.Debugw("fetch output", "root", rootDir, "opt", output, "errMsg", errMsg, "error", err)
+	return output, errMsg, err
+}
+
+func (impl GitServiceImpl) runCommandWithCred(cmd *exec.Cmd, userName, password string) (response, errMsg string, err error) {
+	cmd.Env = append(os.Environ(),
+		fmt.Sprintf("GIT_ASKPASS=%s", GIT_ASK_PASS),
+		fmt.Sprintf("GIT_USERNAME=%s", userName),
+		fmt.Sprintf("GIT_PASSWORD=%s", password),
+	)
+	return impl.runCommand(cmd)
+}
+
+func (impl GitServiceImpl) runCommand(cmd *exec.Cmd) (response, errMsg string, err error) {
+	cmd.Env = append(cmd.Env, "HOME=/dev/null")
+	outBytes, err := cmd.CombinedOutput()
+	if err != nil {
+		impl.logger.Error("error in git cli operation", "msg", string(outBytes), "err", err)
+		exErr, ok := err.(*exec.ExitError)
+		if !ok {
+			return "", string(outBytes), err
+		}
+		errOutput := string(exErr.Stderr)
+		return "", errOutput, err
+	}
+	output := string(outBytes)
+	output = strings.TrimSpace(output)
+	return output, "", nil
 }

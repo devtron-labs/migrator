@@ -18,12 +18,12 @@ func main() {
 	fmt.Println("app initialised ")
 
 	fmt.Println("sleeping before clone+checkout")
-	time.Sleep(100 * time.Second)
+	time.Sleep(10 * time.Second)
 
-	cloneDir, err := app.gitService.CloneAndCheckout("app")
+	cloneDir, err := app.gitService.CloneAndCheckout2("app")
 
 	fmt.Println("sleeping after clone+checkout")
-	time.Sleep(100 * time.Second)
+	time.Sleep(50 * time.Second)
 
 	fmt.Println("checkout " + cloneDir)
 	checkErr(err)
