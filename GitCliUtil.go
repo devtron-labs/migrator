@@ -28,9 +28,9 @@ func (impl GitCliUtil) Fetch(rootDir string, username string, password string) (
 	return output, errMsg, err
 }
 
-func (impl GitCliUtil) Checkout(rootDir string, username string, password string, branchName string) (response, errMsg string, err error) {
-	impl.logger.Infow("git checkout ", "location", rootDir)
-	cmd := exec.Command("git", "-C", rootDir, "checkout", branchName)
+func (impl GitCliUtil) Checkout(rootDir string, username string, password string, checkout string) (response, errMsg string, err error) {
+	impl.logger.Infow("git checkout ", "location", rootDir, "checkout", checkout)
+	cmd := exec.Command("git", "-C", rootDir, "checkout", checkout)
 	output, errMsg, err := impl.runCommandWithCred(cmd, username, password)
 	impl.logger.Infow("checkout output", "rootDir", rootDir, "errMsg", errMsg, "error", err)
 	return output, errMsg, err
