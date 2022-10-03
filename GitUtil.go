@@ -111,7 +111,12 @@ func (impl GitServiceImpl) Clone(targetDir, branch string) (workTree *git.Worktr
 		impl.logger.Errorw("error in git checkout ", "url", impl.config.GitRepoUrl, "targetDir", targetDir, "err", err)
 		return nil, "", err
 	}
+
 	impl.logger.Infow("cloned ", "dir", clonedDir, "source", impl.config.GitRepoUrl)
+
+	fmt.Println("sleeping before Worktree")
+	time.Sleep(100 * time.Second)
+
 	w, err := repo.Worktree()
 	if err != nil {
 		impl.logger.Errorw("error in work tree resolution", "err", err)
