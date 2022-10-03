@@ -24,7 +24,7 @@ func (impl GitCliUtil) Fetch(rootDir string, username string, password string) (
 	impl.logger.Infow("git fetch ", "location", rootDir)
 	cmd := exec.Command("git", "-C", rootDir, "fetch", "origin", "--tags", "--force")
 	output, errMsg, err := impl.runCommandWithCred(cmd, username, password)
-	impl.logger.Infow("fetch output", "root", rootDir, errMsg, "error", err)
+	impl.logger.Infow("fetch output", "rootDir", rootDir, "errMsg", errMsg, "error", err)
 	return output, errMsg, err
 }
 
@@ -32,7 +32,7 @@ func (impl GitCliUtil) Checkout(rootDir string, username string, password string
 	impl.logger.Infow("git checkout ", "location", rootDir)
 	cmd := exec.Command("git", "-C", rootDir, "checkout", branchName)
 	output, errMsg, err := impl.runCommandWithCred(cmd, username, password)
-	impl.logger.Infow("checkout output", "root", rootDir, "errMsg", errMsg, "error", err)
+	impl.logger.Infow("checkout output", "rootDir", rootDir, "errMsg", errMsg, "error", err)
 	return output, errMsg, err
 }
 
