@@ -106,9 +106,6 @@ func (impl GitServiceImpl) CloneAndCheckout(targetDir string) (string, error) {
 		return clonedDir, err
 	}
 
-	fmt.Println("sleeping after checkout")
-	time.Sleep(100 * time.Second)
-
 	return clonedDir, nil
 }
 
