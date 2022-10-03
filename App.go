@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"reflect"
+	"time"
 
 	_ "github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
@@ -15,11 +16,27 @@ func main() {
 	fmt.Println("starting migration")
 	app := NewApp()
 	fmt.Println("app initialised ")
+
+	fmt.Println("sleeping before checkout")
+	time.Sleep(100 * time.Second)
+
 	cloneDir, err := app.gitService.CloneAndCheckout("app")
+
+	fmt.Println("sleeping after checkout")
+	time.Sleep(100 * time.Second)
+
 	fmt.Println("checkout " + cloneDir)
 	checkErr(err)
 	scriptSource := app.gitService.BuildScriptSource(cloneDir)
+
+	fmt.Println("sleeping after building script source")
+	time.Sleep(100 * time.Second)
+
 	v, err := app.migrateUtil.Migrate(scriptSource)
+
+	fmt.Println("sleeping after migrate")
+	time.Sleep(100 * time.Second)
+
 	checkErr(err)
 	fmt.Printf("migrated to %d", v)
 
