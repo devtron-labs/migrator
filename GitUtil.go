@@ -81,9 +81,13 @@ func (impl GitServiceImpl) BuildScriptSource(clonedDir string) string {
 }
 
 func (impl GitServiceImpl) CloneAndCheckout(targetDir string) (string, error) {
-	branch := impl.config.GitBranch
-	if branch == "" {
-		branch = "master"
+	var checkout string
+	if impl.config.GitHash != "" {
+		checkout = impl.config.GitHash
+	} else if impl.config.GitTag != "" {
+		checkout = impl.config.GitTag
+	} else {
+		return "", fmt.Errorf("neither tag nor hash provided")
 	}
 
 	clonedDir := filepath.Join(impl.config.GitWorkingDir, targetDir)
@@ -100,7 +104,7 @@ func (impl GitServiceImpl) CloneAndCheckout(targetDir string) (string, error) {
 		return clonedDir, err
 	}
 
-	_, _, err = impl.gitCliUtil.Checkout(clonedDir, impl.config.UserName, impl.config.Token, branch)
+	_, _, err = impl.gitCliUtil.Checkout(clonedDir, impl.config.UserName, impl.config.Token, checkout)
 	if err != nil {
 		impl.logger.Errorw("error in git checkout ", "url", impl.config.GitRepoUrl, "targetDir", targetDir, "err", err)
 		return clonedDir, err
