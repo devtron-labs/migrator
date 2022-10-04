@@ -102,13 +102,13 @@ func (impl GitServiceImpl) CloneAndCheckout(targetDir string) (string, error) {
 	time.Sleep(50 * time.Second)
 
 	_, _, err = impl.gitCliUtil.SparseCheckout(clonedDir, impl.config.UserName, impl.config.Token, checkout, impl.config.ScriptLocation)
+	fmt.Println("after sparse checkout")
+	time.Sleep(50 * time.Second)
+
 	if err != nil {
 		impl.logger.Errorw("error in git sparse checkout ", "url", impl.config.GitRepoUrl, "targetDir", targetDir, "err", err)
 		return clonedDir, err
 	}
-
-	fmt.Println("after sparse checkout")
-	time.Sleep(50 * time.Second)
 
 	/*_, _, err = impl.gitCliUtil.Fetch(clonedDir, impl.config.UserName, impl.config.Token)
 	if err != nil {
