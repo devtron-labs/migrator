@@ -98,7 +98,13 @@ func (impl GitServiceImpl) CloneAndCheckout(targetDir string) (string, error) {
 		return clonedDir, err
 	}
 
-	_, _, err = impl.gitCliUtil.Fetch(clonedDir, impl.config.UserName, impl.config.Token)
+	_, _, err = impl.gitCliUtil.SparseCheckout(clonedDir, impl.config.UserName, impl.config.Token, checkout, impl.config.ScriptLocation)
+	if err != nil {
+		impl.logger.Errorw("error in git sparse checkout ", "url", impl.config.GitRepoUrl, "targetDir", targetDir, "err", err)
+		return clonedDir, err
+	}
+
+	/*_, _, err = impl.gitCliUtil.Fetch(clonedDir, impl.config.UserName, impl.config.Token)
 	if err != nil {
 		impl.logger.Errorw("error in git fetch ", "url", impl.config.GitRepoUrl, "targetDir", targetDir, "err", err)
 		return clonedDir, err
@@ -108,7 +114,7 @@ func (impl GitServiceImpl) CloneAndCheckout(targetDir string) (string, error) {
 	if err != nil {
 		impl.logger.Errorw("error in git checkout ", "url", impl.config.GitRepoUrl, "targetDir", targetDir, "err", err)
 		return clonedDir, err
-	}
+	}*/
 
 	return clonedDir, nil
 }

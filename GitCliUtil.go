@@ -61,3 +61,12 @@ func (impl GitCliUtil) runCommand(cmd *exec.Cmd) (response, errMsg string, err e
 	output = strings.TrimSpace(output)
 	return output, "", nil
 }
+
+func (impl *GitCliUtil) SparseCheckout(rootDir string, username string, password string, checkout string, sparseFolder string) (response, errMsg string, err error) {
+	impl.logger.Infow("sparse checkout ", "location", rootDir, "checkout", checkout, "sparseFolder", sparseFolder)
+	command := "cd " + rootDir + " && git config core.sparseCheckout true && echo " + sparseFolder + " >> .git/info/sparse-checkout && git fetch origin --tags --force && git checkout " + checkout
+	cmd := exec.Command("/bin/sh", "-c", command)
+	output, errMsg, err := impl.runCommandWithCred(cmd, username, password)
+	impl.logger.Infow("sparseCheckout output", "rootDir", rootDir, "errMsg", errMsg, "error", err)
+	return output, errMsg, err
+}
