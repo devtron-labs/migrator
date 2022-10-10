@@ -2,7 +2,9 @@ package main
 
 import (
 	"fmt"
+	"gopkg.in/src-d/go-git.v4/config"
 	"log"
+	"os"
 	"path/filepath"
 	"time"
 
@@ -53,21 +55,24 @@ func GetGitConfig() (*GitConfig, error) {
 }
 
 type GitService interface {
-	CloneAndCheckout(targetDir string) (clonedDir string, err error)
+	CloneAndCheckout(targetDir string) (string, error)
 	BuildScriptSource(clonedDir string) string
 }
+
 type GitServiceImpl struct {
-	Auth   transport.AuthMethod
-	config *GitConfig
-	logger *zap.SugaredLogger
+	Auth       transport.AuthMethod
+	config     *GitConfig
+	logger     *zap.SugaredLogger
+	gitCliUtil *GitCliUtil
 }
 
-func NewGitServiceImpl(config *GitConfig, logger *zap.SugaredLogger) *GitServiceImpl {
+func NewGitServiceImpl(config *GitConfig, logger *zap.SugaredLogger, gitCliUtil *GitCliUtil) *GitServiceImpl {
 	auth := &http.BasicAuth{Password: config.Token, Username: config.UserName}
 	return &GitServiceImpl{
-		Auth:   auth,
-		logger: logger,
-		config: config,
+		Auth:       auth,
+		logger:     logger,
+		config:     config,
+		gitCliUtil: gitCliUtil,
 	}
 }
 
@@ -75,45 +80,37 @@ func (impl GitServiceImpl) BuildScriptSource(clonedDir string) string {
 	return filepath.Join(clonedDir, impl.config.ScriptLocation)
 }
 
-func (impl GitServiceImpl) CloneAndCheckout(targetDir string) (clonedDir string, err error) {
-	branch := impl.config.GitBranch
-	if branch == "" {
-		branch = "master"
-	}
-	workTree, cloneDir, err := impl.Clone(targetDir, branch)
-	if err != nil {
-		return "", err
-	}
+func (impl GitServiceImpl) CloneAndCheckout(targetDir string) (string, error) {
+	var checkout string
 	if impl.config.GitHash != "" {
-		err = impl.CheckoutHash(workTree, impl.config.GitHash)
+		checkout = impl.config.GitHash
 	} else if impl.config.GitTag != "" {
-		err = impl.CheckoutTag(workTree, impl.config.GitTag)
+		checkout = impl.config.GitTag
 	} else {
 		return "", fmt.Errorf("neither tag nor hash provided")
 	}
-	return cloneDir, err
-}
 
-func (impl GitServiceImpl) Clone(targetDir, branch string) (workTree *git.Worktree, clonedDir string, err error) {
-	impl.logger.Infow("git checkout ", "url", impl.config.GitRepoUrl, "dir", targetDir, "branch", branch)
-	clonedDir = filepath.Join(impl.config.GitWorkingDir, targetDir)
-	repo, err := git.PlainClone(clonedDir, false, &git.CloneOptions{
-		URL:           impl.config.GitRepoUrl,
-		Auth:          impl.Auth,
-		ReferenceName: plumbing.ReferenceName(fmt.Sprintf("refs/heads/%s", branch)),
-	})
+	clonedDir := filepath.Join(impl.config.GitWorkingDir, targetDir)
+
+	err := impl.Init(clonedDir, impl.config.GitRepoUrl, false)
+	if err != nil {
+		impl.logger.Errorw("error in git init ", "url", impl.config.GitRepoUrl, "targetDir", targetDir, "err", err)
+		return clonedDir, err
+	}
+
+	_, _, err = impl.gitCliUtil.Fetch(clonedDir, impl.config.UserName, impl.config.Token)
+	if err != nil {
+		impl.logger.Errorw("error in git fetch ", "url", impl.config.GitRepoUrl, "targetDir", targetDir, "err", err)
+		return clonedDir, err
+	}
+
+	_, _, err = impl.gitCliUtil.Checkout(clonedDir, impl.config.UserName, impl.config.Token, checkout)
 	if err != nil {
 		impl.logger.Errorw("error in git checkout ", "url", impl.config.GitRepoUrl, "targetDir", targetDir, "err", err)
-		return nil, "", err
-	}
-	impl.logger.Infow("cloned ", "dir", clonedDir, "source", impl.config.GitRepoUrl)
-	w, err := repo.Worktree()
-	if err != nil {
-		impl.logger.Errorw("error in work tree resolution", "err", err)
-		return nil, "", err
+		return clonedDir, err
 	}
 
-	return w, clonedDir, nil
+	return clonedDir, nil
 }
 
 func (impl GitServiceImpl) CheckoutHash(workTree *git.Worktree, hash string) error {
@@ -183,6 +180,24 @@ func (impl GitServiceImpl) ForceResetHead(repoRoot string) (err error) {
 		Auth:         impl.Auth,
 		Force:        true,
 		SingleBranch: true,
+	})
+	return err
+}
+
+func (impl GitServiceImpl) Init(rootDir string, remoteUrl string, isBare bool) error {
+	//-----------------
+
+	err := os.MkdirAll(rootDir, 0755)
+	if err != nil {
+		return err
+	}
+	repo, err := git.PlainInit(rootDir, isBare)
+	if err != nil {
+		return err
+	}
+	_, err = repo.CreateRemote(&config.RemoteConfig{
+		Name: git.DefaultRemoteName,
+		URLs: []string{remoteUrl},
 	})
 	return err
 }
