@@ -16,6 +16,8 @@ COPY . .
 RUN CGO_ENABLED=0 GOOS=linux go build   -mod=vendor -a -installsuffix cgo -o /go/bin/migrator
 
 FROM ubuntu
+COPY ./git-ask-pass.sh /git-ask-pass.sh
+RUN chmod +x /git-ask-pass.sh
 RUN apt-get update && apt-get install -y ca-certificates && apt-get install git -y
 COPY --from=build-env /go/bin/migrator /go/bin/migrator
 ENTRYPOINT ["/go/bin/migrator"]
