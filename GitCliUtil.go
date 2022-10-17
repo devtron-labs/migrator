@@ -20,9 +20,9 @@ func NewGitCliUtilImpl(logger *zap.SugaredLogger) *GitCliUtil {
 
 const GIT_ASK_PASS = "/git-ask-pass.sh"
 
-func (impl GitCliUtil) Fetch(rootDir string, username string, password string) (response, errMsg string, err error) {
+func (impl GitCliUtil) Fetch(rootDir string, username string, password string, fetchHead string) (response, errMsg string, err error) {
 	impl.logger.Infow("git fetch ", "location", rootDir)
-	cmd := exec.Command("git", "-C", rootDir, "fetch", "origin", "--tags", "--force")
+	cmd := exec.Command("git", "-C", rootDir, "fetch", "--depth", "1", "origin", fetchHead, "--tags", "--force")
 	output, errMsg, err := impl.runCommandWithCred(cmd, username, password)
 	impl.logger.Infow("fetch output", "rootDir", rootDir, "errMsg", errMsg, "error", err)
 	return output, errMsg, err
@@ -33,6 +33,15 @@ func (impl GitCliUtil) Checkout(rootDir string, username string, password string
 	cmd := exec.Command("git", "-C", rootDir, "checkout", checkout)
 	output, errMsg, err := impl.runCommandWithCred(cmd, username, password)
 	impl.logger.Infow("checkout output", "rootDir", rootDir, "errMsg", errMsg, "error", err)
+	return output, errMsg, err
+}
+
+func (impl *GitCliUtil) SparseCheckout(rootDir string, username string, password string, checkout string, sparseFolder string) (response, errMsg string, err error) {
+	impl.logger.Infow("sparse checkout ", "location", rootDir, "checkout", checkout, "sparseFolder", sparseFolder)
+	command := "cd " + rootDir + " && git config core.sparseCheckout true && mkdir .git/info && echo " + sparseFolder + " >> .git/info/sparse-checkout && git fetch --depth 1 origin " + checkout + " --tags --force && git checkout " + checkout
+	cmd := exec.Command("/bin/sh", "-c", command)
+	output, errMsg, err := impl.runCommandWithCred(cmd, username, password)
+	impl.logger.Infow("sparseCheckout output", "rootDir", rootDir, "errMsg", errMsg, "error", err)
 	return output, errMsg, err
 }
 
