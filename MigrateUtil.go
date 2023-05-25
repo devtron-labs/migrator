@@ -10,7 +10,6 @@ import (
 	_ "github.com/golang-migrate/migrate/v4/source/github"
 	_ "github.com/lib/pq"
 	"go.uber.org/zap"
-	"strconv"
 	"time"
 )
 
@@ -23,9 +22,9 @@ type MigrateConfig struct {
 	Host          string `env:"DB_HOST"  envDefault:"localhost"`
 	Port          string `env:"DB_PORT"  envDefault:"5432"`
 	DbName        string `env:"DB_NAME"  envDefault:"migrate_test"`
-	EnableCounter string `env:"ENABLE_VALIDATE_COUNTER" envDefault:"true"`
-	RetryDelay    string `env:"RETRY_DELAY" envDefault:"5"`
-	RetryCounter  string `env:"RETRY_COUNTER" envDefault:"5"`
+	EnableCounter string `env:"ENABLE_DB_CONNECTION_VALIDATE_COUNTER" envDefault:"true"`
+	RetryDelay    int `env:"DB_CONNECTION_RETRY_DELAY" envDefault:"20"`
+	RetryCounter  int `env:"DB_CONNECTION_RETRY_COUNTER" envDefault:"10"`
 }
 
 func (cfg MigrateConfig) Valid() bool {
@@ -64,10 +63,8 @@ func (util MigrateUtil) CheckConnection() bool {
 	if util.config.EnableCounter != "true" {
 		return true
 	}
-	iterator, err := strconv.ParseInt(util.config.RetryDelay, 10, 64)
-	checkErr(err)
-	timmer, err := strconv.ParseInt(util.config.RetryCounter, 10, 64)
-	checkErr(err)
+	iterator:= util.config.RetryDelay
+	timmer := util.config.RetryCounter
 	for iterator > 0 {
 		fmt.Println("iteration done -- ", iterator)
 		db, _ := sql.Open("postgres", util.config.DatabaseUrl)
