@@ -19,6 +19,10 @@ func main() {
 	fmt.Println("checkout " + cloneDir)
 	checkErr(err)
 	scriptSource := app.gitService.BuildScriptSource(cloneDir)
+	isConnected := app.migrateUtil.CheckConnection()
+	if !isConnected {
+		log.Fatal("database is not connected.")
+	}
 	v, err := app.migrateUtil.Migrate(scriptSource)
 	checkErr(err)
 	fmt.Printf("migrated to %d", v)

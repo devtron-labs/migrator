@@ -1,8 +1,8 @@
 package main
 
 import (
+	"database/sql"
 	"fmt"
-
 	"github.com/caarlos0/env"
 	"github.com/golang-migrate/migrate/v4"
 	_ "github.com/golang-migrate/migrate/v4/database/postgres"
@@ -10,6 +10,7 @@ import (
 	_ "github.com/golang-migrate/migrate/v4/source/github"
 	_ "github.com/lib/pq"
 	"go.uber.org/zap"
+	"time"
 )
 
 type MigrateConfig struct {
@@ -21,6 +22,9 @@ type MigrateConfig struct {
 	Host          string `env:"DB_HOST"  envDefault:"localhost"`
 	Port          string `env:"DB_PORT"  envDefault:"5432"`
 	DbName        string `env:"DB_NAME"  envDefault:"migrate_test"`
+	EnableCounter string `env:"ENABLE_DB_CONNECTION_VALIDATE_COUNTER" envDefault:"true"`
+	RetryDelay    int `env:"DB_CONNECTION_RETRY_DELAY" envDefault:"20"`
+	RetryCounter  int `env:"DB_CONNECTION_RETRY_COUNTER" envDefault:"10"`
 }
 
 func (cfg MigrateConfig) Valid() bool {
@@ -54,6 +58,24 @@ func (util MigrateUtil) Migrate(sourceLocation string) (version uint, err error)
 	} else {
 		return util.migrateUp(fmt.Sprintf("file://%s", sourceLocation))
 	}
+}
+func (util MigrateUtil) CheckConnection() bool {
+	if util.config.EnableCounter != "true" {
+		return true
+	}
+	iterator:= util.config.RetryDelay
+	timmer := util.config.RetryCounter
+	for iterator > 0 {
+		fmt.Println("iteration done -- ", iterator)
+		db, _ := sql.Open("postgres", util.config.DatabaseUrl)
+		err := db.Ping()
+		if err == nil {
+			return true
+		}
+		time.Sleep(time.Duration(timmer) * time.Second)
+		iterator--
+	}
+	return false
 }
 
 func (util MigrateUtil) migrateUp(location string) (version uint, err error) {
