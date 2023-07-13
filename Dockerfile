@@ -1,4 +1,4 @@
-FROM golang:1.11.1-alpine3.8 as build-env
+FROM golang:1.20.6-alpine3.18 as build-env
 # All these steps will be cached
 RUN apk add --no-cache ca-certificates && apk add --no-cache git
 RUN mkdir /migrator
