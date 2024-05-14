@@ -15,10 +15,14 @@ func main() {
 	fmt.Println("starting migration")
 	app := NewApp()
 	fmt.Println("app initialised ")
-	cloneDir, err := app.gitService.CloneAndCheckout("app")
-	fmt.Println("checkout " + cloneDir)
-	checkErr(err)
-	scriptSource := app.gitService.BuildScriptSource(cloneDir)
+	sourceDir := "/tmp/app/"
+	var err error
+	if !app.migrateUtil.config.IsScriptsMounted {
+		sourceDir, err = app.gitService.CloneAndCheckout("app")
+		fmt.Println("checkout " + sourceDir)
+		checkErr(err)
+	}
+	scriptSource := app.gitService.BuildScriptSource(sourceDir)
 	v, err := app.migrateUtil.Migrate(scriptSource)
 	checkErr(err)
 	fmt.Printf("migrated to %d", v)
