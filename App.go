@@ -55,7 +55,7 @@ func NewApp() *App {
 	migrateUtil := NewMigrateUtil(migrateConfig, logger.Sugar())
 	gitcfg := &GitConfig{}
 	fmt.Println("migrate util created")
-	if migrateConfig.IsScriptsMounted {
+	if !migrateConfig.IsScriptsMounted {
 		gitcfg, err = GetGitConfig()
 		checkErr(err)
 		valid = gitcfg.valid()
