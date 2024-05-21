@@ -15,10 +15,14 @@ func main() {
 	fmt.Println("starting migration")
 	app := NewApp()
 	fmt.Println("app initialised ")
-	cloneDir, err := app.gitService.CloneAndCheckout("app")
-	fmt.Println("checkout " + cloneDir)
-	checkErr(err)
-	scriptSource := app.gitService.BuildScriptSource(cloneDir)
+	sourceDir := "/tmp/app/"
+	var err error
+	if !app.migrateUtil.config.IsScriptsMounted {
+		sourceDir, err = app.gitService.CloneAndCheckout("app")
+		fmt.Println("checkout " + sourceDir)
+		checkErr(err)
+	}
+	scriptSource := app.gitService.BuildScriptSource(sourceDir)
 	v, err := app.migrateUtil.Migrate(scriptSource)
 	checkErr(err)
 	fmt.Printf("migrated to %d", v)
@@ -38,26 +42,30 @@ type App struct {
 }
 
 func NewApp() *App {
-	gitcfg, err := GetGitConfig()
-	checkErr(err)
-	valid := gitcfg.valid()
-	if !valid {
-		log.Fatal("not valid git config")
-	}
-	fmt.Printf("valid git config found %v\n", obfuscateSecretTags(gitcfg))
-	logger, err := zap.NewProduction()
-	checkErr(err)
-	gitCliUtil := NewGitCliUtilImpl(logger.Sugar())
-	gitService := NewGitServiceImpl(gitcfg, logger.Sugar(), gitCliUtil)
+
 	migrateConfig, err := GetMigrateConfig()
 	checkErr(err)
-	valid = migrateConfig.Valid()
+	valid := migrateConfig.Valid()
 	if !valid {
 		log.Fatal("not valid migrate config")
 	}
+	logger, err := zap.NewProduction()
+	checkErr(err)
 	fmt.Printf("valid migrate config found: %v\n", obfuscateSecretTags(migrateConfig))
 	migrateUtil := NewMigrateUtil(migrateConfig, logger.Sugar())
+	gitcfg := &GitConfig{}
 	fmt.Println("migrate util created")
+	if !migrateConfig.IsScriptsMounted {
+		gitcfg, err = GetGitConfig()
+		checkErr(err)
+		valid = gitcfg.valid()
+		if !valid {
+			log.Fatal("not valid git config")
+		}
+		fmt.Printf("valid git config found %v\n", obfuscateSecretTags(gitcfg))
+	}
+	gitCliUtil := NewGitCliUtilImpl(logger.Sugar())
+	gitService := NewGitServiceImpl(gitcfg, logger.Sugar(), gitCliUtil)
 	return &App{migrateUtil: migrateUtil, gitService: gitService}
 }
 

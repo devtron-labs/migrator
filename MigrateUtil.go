@@ -13,14 +13,15 @@ import (
 )
 
 type MigrateConfig struct {
-	DatabaseUrl   string /*`env:"DB_URL" envDefault:"postgres://postgres:devtronpg@127.0.0.1:5432/migrate_test?sslmode=disable"`*/
-	TargetVersion uint   `env:"MIGRATE_TO_VERSION" envDefault:"0"`
-	DbType        string `env:"DB_TYPE"  envDefault:"postgres"`
-	UserName      string `env:"DB_USER_NAME"  envDefault:"postgres"`
-	Password      string `env:"DB_PASSWORD"  secretData:"-"`
-	Host          string `env:"DB_HOST"  envDefault:"localhost"`
-	Port          string `env:"DB_PORT"  envDefault:"5432"`
-	DbName        string `env:"DB_NAME"  envDefault:"migrate_test"`
+	DatabaseUrl      string /*`env:"DB_URL" envDefault:"postgres://postgres:devtronpg@127.0.0.1:5432/migrate_test?sslmode=disable"`*/
+	TargetVersion    uint   `env:"MIGRATE_TO_VERSION" envDefault:"0"`
+	DbType           string `env:"DB_TYPE"  envDefault:"postgres"`
+	UserName         string `env:"DB_USER_NAME"  envDefault:"postgres"`
+	Password         string `env:"DB_PASSWORD"  secretData:"-"`
+	Host             string `env:"DB_HOST"  envDefault:"localhost"`
+	Port             string `env:"DB_PORT"  envDefault:"5432"`
+	DbName           string `env:"DB_NAME"  envDefault:"migrate_test"`
+	IsScriptsMounted bool   `env:"SCRIPT_MOUNTED" envDefault:"false"`
 }
 
 func (cfg MigrateConfig) Valid() bool {
